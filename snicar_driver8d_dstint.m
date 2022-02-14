@@ -47,6 +47,8 @@
 %                 (units of parts per billion, ng g-1)
 % mss_cnc_dstint: mass mixing ratio of dust species (internally mixed with snow)
 %                 (units of parts per billion, ng g-1) add by che
+% mss_cnc_dstext: mass mixing ratio of dust species (externally mixed with snow)
+%                 (units of parts per billion, ng g-1) add by che
 % fl_sot1:      name of file containing optical properties for BC species 1
 % fl_sot2:      name of file containing optical properties for BC species 2
 % fl_dst1:      name of file containing optical properties for dust species 1
@@ -147,6 +149,7 @@ nbr_aer = 7;
 
 % PARTICLE MASS MIXING RATIOS (units: ng(species)/g(ice), or ppb)
 mss_cnc_dstint(1:nbr_lyr)= 0.0;    % che: dust internally mixed with snow
+mss_cnc_dstext(1:nbr_lyr)= 0.0;    % che: dust externally mixed with snow
 mss_cnc_sot3(1:nbr_lyr)  = 0.0;    % che: black carbon internally mixed with snow
 mss_cnc_sot1(1:nbr_lyr)  = 0.0;    % uncoated black carbon
 mss_cnc_sot2(1:nbr_lyr)  = 0.0;    % coated black carbon
@@ -178,7 +181,8 @@ data_in = snicar8d_v2_dustint(BND_TYP, DIRECT, APRX_TYP, DELTA, coszen, R_sfc, .
                    mss_cnc_sot2, mss_cnc_dst1, mss_cnc_dst2, ...
                    mss_cnc_dst3, mss_cnc_dst4, mss_cnc_ash1, fl_sot1, ...
                    fl_sot2, fl_dst1, fl_dst2, fl_dst3, fl_dst4, fl_ash1, ...
-                   SNO_SHP, BC_SNO_MIX, SNO_fs, SNO_AR, mss_cnc_sot3, DST_SNO_MIX, mss_cnc_dstint); 
+                   SNO_SHP, BC_SNO_MIX, SNO_fs, SNO_AR, mss_cnc_sot3, ...
+                   DST_SNO_MIX, mss_cnc_dstint,mss_cnc_dstext); 
 
 
 % process input data:

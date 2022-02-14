@@ -116,7 +116,7 @@ function data_out = snicar8d_v2_dustint(BND_TYP_IN, DIRECT_IN, APRX_TYP_IN, ...
                              fl_dst1_in, fl_dst2_in, fl_dst3_in, ...
                              fl_dst4_in, fl_ash1_in, ...
                              SNO_SHP_in,BC_SNO_MIX_in,SNO_fs_in,SNO_AR_in,... %che
-                             mss_cnc_sot3_in,DST_SNO_MIX_in, mss_cnc_dstint_in) % che
+                             mss_cnc_sot3_in,DST_SNO_MIX_in, mss_cnc_dstint_in, mss_cnc_dstext_in) % che
 
     
 if (1==0)
@@ -158,7 +158,8 @@ if (1==0)
     mss_cnc_dst4(1:nbr_lyr)  = 0.0;    % dust species 4
     mss_cnc_ash1(1:nbr_lyr)  = 0.0;    % volcanic ash species 1
     mss_cnc_dstint(1:nbr_lyr)  = 0.0;  % che: add dust species internally mixed with snow
-  
+    mss_cnc_dstext(1:nbr_lyr)  = 0.0;
+    
     % FILE NAMES CONTAINING MIE PARAMETERS FOR ALL AEROSOL SPECIES:
     % (ideally, these files should exist in all 'band' directories)
     fl_sot1  = 'mie_sot_ChC90_dns_1317.nc';
@@ -270,7 +271,8 @@ else
     mss_cnc_dst4  = mss_cnc_dst4_in;
     mss_cnc_ash1  = mss_cnc_ash1_in;
     mss_cnc_sot3  = mss_cnc_sot3_in; %che: add BC species internally mixed with snow
-    mss_cnc_dstint  = mss_cnc_dstint_in; %che: add dust species internally mixed with snow
+    mss_cnc_dstint = mss_cnc_dstint_in; %che: add dust species internally mixed with snow
+    mss_cnc_dstext = mss_cnc_dstext_in;
     
     fl_sot1       = fl_sot1_in;
     fl_sot2       = fl_sot2_in;
@@ -468,6 +470,9 @@ E_wvl = [0.2000,0.2632,0.3448,0.4415,0.6250,0.7782,1.2422];
 E_a1  = [-2.1307E+01,-1.5815E+01,-9.2880E+00,1.1115E+00,1.0307E+00,1.0185E+00] ;
 E_a2  = [ 1.1746E+02, 9.3241E+01, 4.0605E+01,3.7389E-01,1.4800E-02,2.8921E-04] ;
 E_a3  = [ 9.9701E-01, 9.9781E-01, 9.9848E-01,1.0035E+00,1.0024E+00,1.0356E+00] ;
+EE_a1 = [-3.9235E+01,-3.2216E+01,-1.5679E+01,1.0010E+00,9.9906E-01,9.9990E-01] ;
+EE_a2 = [ 8.8913E+01, 7.4956E+01, 3.3739E+01,3.2146E-01,1.4510E-02,2.0860E-04] ;
+EE_a3 = [ 9.6241E-01, 9.6331E-01, 9.6270E-01,9.6617E-01,9.4230E-01,9.5425E-01] ;
 nwvl_E = length(E_a1);
 E_wvl_center = E_wvl(2:(nwvl_E+1))/2 + R_wvl(1:nwvl_E)/2 ; % center point for wavelength band
 %%%
@@ -614,7 +619,8 @@ for n=1:nbr_lyr
      %   tmp_1_omega_snw(1:90) = 10.0 .^ tmp_1_omega_sm ; 
         tmp_data = tmp_1_omega_snw;
         tmp_data(91:470) = 0.0; % do not treat wavelength>1.2um
-        tmp_1_omega_snw(tmp_data>tmp_1_omega_snw(91)) = tmp_1_omega_snw(91); % prevenet snow ssa to go too low and keep continuity
+        %tmp_1_omega_snw(tmp_data>tmp_1_omega_snw(91)) = tmp_1_omega_snw(91); % prevenet snow ssa to go too low and keep continuity
+        tmp_1_omega_snw(tmp_data>0.5) = 0.5; % prevenet snow ssa to go too low
         % new omega for entire BC-snow internal mixture
         omega_snw(:,n) = 1.0 - tmp_1_omega_snw;
     end
@@ -633,20 +639,51 @@ for n=1:nbr_lyr
         E_intp(E_intp > 1e5) = 1e5;        
         E_intp(91:470) = 1.0; % lambda>1.2um, no dust enhancement
         % new 1-omega (single-scattering coalbedo) for entire dust-snow internal mixture
-        tmp_1_omega_snw = (1.0 - omega_snw(:,n)) .* E_intp;
-        tmp_data = tmp_1_omega_snw;
-        tmp_data(91:470) = 0.0; % do not treat wavelength>1.2um
-        tmp_1_omega_snw(tmp_data>tmp_1_omega_snw(91)) = tmp_1_omega_snw(91); % prevenet snow ssa to go too low and keep continuity
         % Recommended: smoothing the enhanced 1-omega for <1.2um (small
         % wiggling pattern would occur sometime). Smoothing has negligible 
         % effects on broadband (vis & NIR) omega & albedo
-      %  tmp_1_omega_sm = smooth(log10(tmp_1_omega_snw(1:90)),5) ; % 5-point moving average smooth
-      %  tmp_1_omega_snw(1:90) = 10.0 .^ tmp_1_omega_sm ; 
-        % new omega for entire BC-snow internal mixture
+        %tmp_1_omega_sm = smooth(log10(tmp_1_omega_snw(1:90)),5) ; % 5-point moving average smooth
+        %tmp_1_omega_snw(1:90) = 10.0 .^ tmp_1_omega_sm ; 
+
+        tmp_1_omega_snw = (1.0 - omega_snw(:,n)) .* E_intp;
+        tmp_data = tmp_1_omega_snw;
+        tmp_data(91:470) = 0.0; % do not treat wavelength>1.2um
+        %tmp_1_omega_snw(tmp_data>tmp_1_omega_snw(91)) = tmp_1_omega_snw(91); % prevenet snow ssa to go too low and keep continuity
+        tmp_1_omega_snw(tmp_data>0.5) = 0.5; % prevenet snow ssa to go too low        
+      % new omega for entire BC-snow internal mixture
         omega_snw(:,n) = 1.0 - tmp_1_omega_snw;
     end
     %%%
- 
+
+    %%% che: added by Cenlin He for dust-snow ext mixing
+    if (DST_SNO_MIX(n) == 1 && mss_cnc_dstext(n) > 0)   % dust-snow external mixing
+        % E_1_omega: dust-induced enhancement in snow single-scattering coalbedo
+        % E_1_omega from Eq.1 in He et al.(2019,JAMES), Cdust: ppm unit
+        EE_1_omega_tmp = EE_a1 + EE_a2 .* (mss_cnc_dstext(n)/1000).^EE_a3 ; 
+        % shape-preserving piecewise interpolation into 470-bands
+        logEE_1_omega_tmp = log10(EE_1_omega_tmp); % interpolate in a logscale field
+        logEE_intp = pchip(E_wvl_center,logEE_1_omega_tmp,wvl) ;
+        EE_intp = 10.0 .^ logEE_intp;
+        EE_intp(EE_intp < 1.0) = 1.0; % dust does not reduce snow absorption       
+        EE_intp(EE_intp > 1e5) = 1e5;        
+        EE_intp(91:470) = 1.0; % lambda>1.2um, no dust enhancement
+        % new 1-omega (single-scattering coalbedo) for entire dust-snow internal mixture
+        % Recommended: smoothing the enhanced 1-omega for <1.2um (small
+        % wiggling pattern would occur sometime). Smoothing has negligible 
+        % effects on broadband (vis & NIR) omega & albedo
+        %tmp_1_omega_sm = smooth(log10(tmp_1_omega_snw(1:90)),5) ; % 5-point moving average smooth
+        %tmp_1_omega_snw(1:90) = 10.0 .^ tmp_1_omega_sm ; 
+
+        tmp_1_omega_snw = (1.0 - omega_snw(:,n)) .* EE_intp;
+        tmp_data = tmp_1_omega_snw;
+        tmp_data(91:470) = 0.0; % do not treat wavelength>1.2um
+        %tmp_1_omega_snw(tmp_data>tmp_1_omega_snw(91)) = tmp_1_omega_snw(91); % prevenet snow ssa to go too low and keep continuity
+        tmp_1_omega_snw(tmp_data>0.5) = 0.5; % prevenet snow ssa to go too low        
+      % new omega for entire BC-snow internal mixture
+        omega_snw(:,n) = 1.0 - tmp_1_omega_snw;
+    end
+    %%%
+
 end
 
 % Read Mie aerosol parameters (layer-independent)
@@ -667,6 +704,7 @@ g_aer(:,2)           = ncread(fl_in2,'asm_prm');
 ext_cff_mss_aer(:,2) = ncread(fl_in2,'ext_cff_mss_cor');
 %ext_cff_mss_aer(:,2)= ncread(fl_in2,'ext_cff_mss');
 
+%%% change to read in new dust optics
 omega_aer(:,3)       = ncread(fl_in3,'ss_alb');
 g_aer(:,3)           = ncread(fl_in3,'asm_prm');
 ext_cff_mss_aer(:,3) = ncread(fl_in3,'ext_cff_mss');
@@ -682,6 +720,35 @@ ext_cff_mss_aer(:,5) = ncread(fl_in5,'ext_cff_mss');
 omega_aer(:,6)       = ncread(fl_in6,'ss_alb');
 g_aer(:,6)           = ncread(fl_in6,'asm_prm');
 ext_cff_mss_aer(:,6) = ncread(fl_in6,'ext_cff_mss');
+
+% omegadst_tmp = ncread(fl_in3,'ss_alb');
+% gdst_tmp     = ncread(fl_in3,'asm_prm');
+% extdst_tmp   = ncread(fl_in3,'ext_cff_mss');
+% omega_aer(:,3)       = omegadst_tmp(11:480);
+% g_aer(:,3)           = gdst_tmp(11:480);
+% ext_cff_mss_aer(:,3) = extdst_tmp(11:480);
+% 
+% omegadst_tmp = ncread(fl_in4,'ss_alb');
+% gdst_tmp     = ncread(fl_in4,'asm_prm');
+% extdst_tmp   = ncread(fl_in4,'ext_cff_mss');
+% omega_aer(:,4)       = omegadst_tmp(11:480);
+% g_aer(:,4)           = gdst_tmp(11:480);
+% ext_cff_mss_aer(:,4) = extdst_tmp(11:480);
+% 
+% omegadst_tmp = ncread(fl_in5,'ss_alb');
+% gdst_tmp     = ncread(fl_in5,'asm_prm');
+% extdst_tmp   = ncread(fl_in5,'ext_cff_mss');
+% omega_aer(:,5)       = omegadst_tmp(11:480);
+% g_aer(:,5)           = gdst_tmp(11:480);
+% ext_cff_mss_aer(:,5) = extdst_tmp(11:480);
+% 
+% omegadst_tmp = ncread(fl_in6,'ss_alb');
+% gdst_tmp     = ncread(fl_in6,'asm_prm');
+% extdst_tmp   = ncread(fl_in6,'ext_cff_mss');
+% omega_aer(:,6)       = omegadst_tmp(11:480);
+% g_aer(:,6)           = gdst_tmp(11:480);
+% ext_cff_mss_aer(:,6) = extdst_tmp(11:480);
+%%%%
 
 omega_aer(:,7)       = ncread(fl_in7,'ss_alb');
 g_aer(:,7)           = ncread(fl_in7,'asm_prm');
